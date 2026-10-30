@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useWebSocket } from './hooks/useWebSocket';
-import { drawCard } from './data/cards';
 import type { Card } from './data/cards';
 import { CardHandSimple } from './components/CardHandSimple';
 import { DungeonCanvas } from './components/DungeonCanvas';
@@ -8,12 +7,21 @@ import { botChooseCard } from './ai/bot';
 import { Lobby } from './components/Lobby';
 
 export default function App() {
-  const { state, connected, send } = useWebSocket();
+  const { state, connected, send, playerId, drawCard: requestDraw } = useWebSocket(
+    useCallback((cards: Card[]) => {
+      setHand(h => [...h, ...cards]);
+    }, [])
+  );
   const [hand, setHand] = useState<Card[]>([]);
+  const [started, setStarted] = useState(false);
 
+  // Request opening hand from server on connect
   useEffect(() => {
-    if (connected && hand.length === 0) setHand([drawCard(), drawCard(), drawCard()]);
-  }, [connected]);
+    if (connected && !started) {
+      setStarted(true);
+      for (let i = 0; i < 3; i++) requestDraw();
+    }
+  }, [connected, started, requestDraw]);
 
   if (!connected) return <div style={{ padding: 16 }}>Connecting…</div>;
   if (!state) {
@@ -26,13 +34,40 @@ export default function App() {
     const winner = state.players.reduce((a,b) => (a.souls > b.souls ? a : b));
     return <div style={{ padding:16 }}><h1>Game Over</h1><p>Winner: {winner.name} ({winner.souls} souls)</p><p>{state.players.map(p=>`${p.name}: ${p.souls} souls, ${p.wounds} wounds`).join(' · ')}</p></div>;
   }
+
+  const me = state.players.find(p => p.id === playerId) || state.players[0];
+  const others = state.players.filter(p => p.id !== playerId);
+
   return (
     <div style={{ padding: 16 }}>
       <h1>Boss Monster — {state.roomId}</h1>
-      <p>Phase: {state.phase} · Players: {state.players.map(p=>p.name||p.id).join(', ')}</p>
-      <DungeonCanvas slots={state.players[0]?.dungeon || []} />
+      <p style={{ fontSize: 12, opacity: 0.7 }}>Phase: {state.phase} · Players: {state.players.map(p=>p.name||p.id).join(', ')}</p>
+
+      {/* Other players' dungeons */}
+      {others.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          {others.map(p => (
+            <div key={p.id} style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>{p.name} — {p.souls} souls, {p.wounds} wounds</div>
+              <DungeonCanvas slots={p.dungeon} width={400} height={80} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* My dungeon */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{me.name} (YOU) — {me.souls} souls, {me.wounds} wounds</div>
+        <DungeonCanvas slots={me.dungeon} />
+      </div>
+
       {state.heroes.length > 0 && <p>Heroes in play: {state.heroes.map(h=>`${h.name}(${h.hp}/${h.maxHp})`).join(', ')}</p>}
-      <button onClick={() => { const c = botChooseCard(hand); if (c) { send({ type:'PLAY', cardUid: c.uid, cardName: c.name, treasure: c.treasure, damage: c.damage }); setHand(h => h.filter(x=>x.uid!==c.uid)); } }}>Bot Play</button>
+
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+        <button onClick={() => requestDraw()}>Draw Card</button>
+        <button onClick={() => { const c = botChooseCard(hand); if (c) { send({ type:'PLAY', cardUid: c.uid, cardName: c.name, treasure: c.treasure, damage: c.damage }); setHand(h => h.filter(x=>x.uid!==c.uid)); } }}>Bot Play</button>
+      </div>
+
       <CardHandSimple cards={hand} onPlay={(uid) => { const c = hand.find(x=>x.uid===uid); send({ type:'PLAY', cardUid: uid, cardName: c?.name, treasure: c?.treasure, damage: c?.damage }); setHand(h => h.filter(c=>c.uid!==uid)); }} />
     </div>
   );

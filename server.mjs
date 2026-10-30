@@ -33,6 +33,51 @@ function publicState(room) {
   };
 }
 
+// Card data for the server-side deck (mirrors src/data/cards.ts)
+const CARDS = [
+  { name:'Dark Altar', rarity:'common', treasure:'ankh', damage:1, type:'room' },
+  { name:'Open Grave', rarity:'common', treasure:'ankh', damage:2, type:'room' },
+  { name:"Specter's Sanctum", rarity:'common', treasure:'ankh', damage:2, type:'room' },
+  { name:'Succubus Spa', rarity:'common', treasure:'ankh', damage:1, type:'room' },
+  { name:'Dracolich Lair', rarity:'rare', treasure:'ankh', damage:3, type:'room' },
+  { name:'Vampire Bordello', rarity:'rare', treasure:'ankh', damage:3, type:'room' },
+  { name:'Goblin Armory', rarity:'common', treasure:'sword', damage:1, type:'room' },
+  { name:'Golem Factory', rarity:'common', treasure:'sword', damage:2, type:'room' },
+  { name:"Minotaur's Maze", rarity:'common', treasure:'sword', damage:0, type:'room' },
+  { name:'Neanderthal Cave', rarity:'uncommon', treasure:'sword', damage:3, type:'room' },
+  { name:'Beast Menagerie', rarity:'rare', treasure:'sword', damage:4, type:'room' },
+  { name:'Brainsucker Hive', rarity:'common', treasure:'book', damage:2, type:'room' },
+  { name:'Dark Laboratory', rarity:'common', treasure:'book', damage:1, type:'room' },
+  { name:'Haunted Library', rarity:'common', treasure:'book', damage:1, type:'room' },
+  { name:"Witch's Kitchen", rarity:'common', treasure:'book', damage:1, type:'room' },
+  { name:'All-Seeing Eye', rarity:'rare', treasure:'book', damage:3, type:'room' },
+  { name:"Liger's Den", rarity:'rare', treasure:'book', damage:2, type:'room' },
+  { name:'Bottomless Pit', rarity:'common', treasure:'coin', damage:1, type:'room' },
+  { name:'Boulder Ramp', rarity:'common', treasure:'coin', damage:1, type:'room' },
+  { name:'Dizzygas Hallway', rarity:'common', treasure:'coin', damage:1, type:'room' },
+];
+
+let cardCounter = 0;
+function makeDeck() {
+  const deck = [];
+  for (const c of CARDS) { deck.push({ ...c }); deck.push({ ...c }); }
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck;
+}
+
+function drawCard(room) {
+  if (!room.deck || !room.deck.length) {
+    room.deck = makeDeck();
+    room.discard = [];
+  }
+  const card = room.deck.pop();
+  if (card) card.uid = 'c' + (++cardCounter);
+  return card;
+}
+
 function broadcast(room) {
   const msg = JSON.stringify({ type: 'STATE', state: publicState(room), phase: room.phase });
   for (const [ws, ps] of PlayerState) {
@@ -94,6 +139,7 @@ wss.on('connection', (ws) => {
   PlayerState.set(ws, { id, name: null, roomId: null });
   ws.isAlive = true;
   ws.on('pong', () => { ws.isAlive = true; });
+  ws.send(JSON.stringify({ type: 'SET_ID', id }));
 
   ws.on('message', (raw) => {
     let data; try { data = JSON.parse(raw); } catch { return; }
@@ -105,7 +151,7 @@ wss.on('connection', (ws) => {
         break;
       case 'CREATE_ROOM': {
         const roomId = Math.random().toString(36).slice(2, 11);
-        const room = { id: roomId, players: [ps.id], phase: Phases.LOBBY, playerData: {}, heroes: [], acted: 0 };
+        const room = { id: roomId, players: [ps.id], phase: Phases.LOBBY, playerData: {}, heroes: [], acted: 0, deck: null, discard: [] };
         room.playerData[ps.id] = { souls:0, wounds:0, dungeon: Array.from({length:5}, (_,i)=>({index:i})) };
         Rooms.set(roomId, room);
         ps.roomId = roomId;
@@ -146,6 +192,16 @@ wss.on('connection', (ws) => {
         if (ps.roomId) {
           const r = Rooms.get(ps.roomId);
           if (r) advanceRound(r);
+        }
+        break;
+      }
+      case 'DRAW_CARD': {
+        if (ps.roomId) {
+          const r = Rooms.get(ps.roomId);
+          if (r) {
+            const card = drawCard(r);
+            if (card) ws.send(JSON.stringify({ type: 'DRAWN', cards: [card] }));
+          }
         }
         break;
       }

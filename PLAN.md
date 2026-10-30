@@ -17,38 +17,57 @@ Phase 1 MVP: architecture/design docs + socket state sync. No feature content ye
 - Heroes have HP, treasure preference, damage.
 - First boss to 10 souls wins; 5 wounds = eliminated.
 
-## Phase 1 — Foundation (this phase)
-1. Project scaffold (npm init, deps)
-2. Backend WebSocket server: PlayerState registry (Map), room create/join, state broadcast
-3. Core types: PlayerState, PublicState, Phase enum, Currency
-4. Client: Vite + React, WebSocket hook, phase-driven view shell
-5. Smoke test: two browser tabs connect, see shared state
+## Phase 1 — Foundation (✅ complete)
+1. ✅ Project scaffold (npm init, deps)
+2. ✅ Backend WebSocket server: PlayerState registry (Map), room create/join, state broadcast
+3. ✅ Core types: Phase enum, Currency, RoomSlot, Hero, PlayerPublic, PublicState, ClientMessage, ServerMessage
+4. ✅ Client: Vite + React, WebSocket hook, phase-driven view shell
+5. ✅ Smoke test: two players connect, see shared state, play cards, combat resolves
+6. ✅ Server sends SET_ID on connect (player identity)
+7. ✅ Server-side shared draw pile (makeDeck, drawCard, DRAW_CARD handler, DRAWN response)
+8. ✅ Client opening hand draw (3 cards from server), Draw Card button
+9. ✅ Multi-player dungeon view (own dungeon highlighted as YOU, others shown)
+10. ✅ Build verification: scripts/verify_build.mjs (17/17 checks pass)
+11. ✅ Phase machine: LOBBY → AGENT → REVEAL → DUNGEON → ROUND_END → AGENT (loop) → GAME_OVER
 
-## Phase 2+ (later)
-- Card system (rooms, spells, bosses), auto-draw
-- Hero combat (HP/damage)
-- Room slot visuals on canvas grid
-- Multiplayer lobby matchmaking
-- Bot AI
+## Phase 2+ (in progress / later)
+- ✅ Card system: server-side deck with 19 room cards, 2 copies each, shuffled
+- ✅ Auto-draw: opening hand of 3 cards, plus Draw Card button
+- ✅ Rarity color-coding: common(blue), uncommon(green), rare(yellow), legendary(pink)
+- ✅ PlayCard click handler with server-side validation
+- ✅ Hero combat: HP/damage on server (resolveDungeon), hero health tracking
+- ✅ Room slot visuals: DungeonCanvas renders 5-slot grid with HP bars
+- ✅ Bot AI: botChooseCard (highest damage, rarity tiebreak)
+- 🔄 Phase 3: Hero combat display (heroes shown as text, needs visual on canvas)
+- 🔄 Phase 4: Auto-play bots, multiplayer lobby enhancements, combat animations
 
 ## Directory Layout
 ```
 boss-monster-multiplayer/
-  server.mjs          # Express + ws
+  server.mjs          # Express + ws, deck system, phase machine
   package.json
   vite.config.ts
   tsconfig.json
+  PLAN.md
+  render.yaml         # Deploy to Render.com
+  scripts/
+    smoke_test.mjs    # WebSocket integration test
+    verify_build.mjs  # Bundle content verification
   src/
     main.tsx
-    App.tsx
+    App.tsx           # Phase-driven view: Lobby → GameView (all dungeons) → GameOver
     core/
       types.ts
-      serialize.ts
     components/
-      GameView.tsx
-      Lobby.tsx
+      CardHandSimple.tsx  # React.memo, rarity color borders
+      DungeonCanvas.tsx   # Canvas grid renderer (5 slots, HP bars)
+      Lobby.tsx           # Name entry + create/join room
+    data/
+      cards.ts        # 19 room cards, RarityColors, drawCard()
+    ai/
+      bot.ts          # botChooseCard, botShouldPlay
     hooks/
-      useWebSocket.ts
+      useWebSocket.ts # SET_ID, STATE, DRAWN handling, drawCard
   build/              # vite output, served by express
 ```
 

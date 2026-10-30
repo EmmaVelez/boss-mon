@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "start": "node server.mjs"
+    "start": "node server.mjs",
+    "verify": "node scripts/verify_build.mjs"
   },
   "dependencies": {
     "express": "^4.21.0",

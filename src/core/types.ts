@@ -1,3 +1,5 @@
+import type { Card } from '../data/cards';
+
 export type Phase = 'LOBBY' | 'AGENT' | 'REVEAL' | 'DUNGEON' | 'ROUND_END' | 'GAME_OVER';
 
 export interface Currency { gold?: number; mana?: number; food?: number; }
@@ -37,7 +39,7 @@ export interface PublicState {
 }
 
 export interface ClientMessage {
-  type: 'SET_NAME' | 'CREATE_ROOM' | 'JOIN_ROOM' | 'PLAY' | 'PASS';
+  type: 'SET_NAME' | 'CREATE_ROOM' | 'JOIN_ROOM' | 'PLAY' | 'PASS' | 'DRAW_CARD';
   name?: string;
   roomId?: string;
   cardUid?: string;
@@ -45,8 +47,10 @@ export interface ClientMessage {
 }
 
 export interface ServerMessage {
-  type: 'STATE' | 'ERROR';
+  type: 'STATE' | 'ERROR' | 'SET_ID' | 'DRAWN';
   state?: PublicState;
   phase?: Phase;
   message?: string;
+  id?: string;
+  cards?: Card[];
 }
