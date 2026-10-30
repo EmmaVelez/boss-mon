@@ -1,0 +1,178 @@
+import express from 'express';
+import http from 'http';
+import { WebSocketServer } from 'ws';
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PORT = process.env.PORT || 3000;
+
+const app = express();
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server, path: '/ws' });
+
+const PlayerState = new Map();
+const Rooms = new Map();
+const Phases = { LOBBY:'LOBBY', AGENT:'AGENT', REVEAL:'REVEAL', DUNGEON:'DUNGEON', ROUND_END:'ROUND_END', GAME_OVER:'GAME_OVER' };
+
+let nextId = 1;
+const uid = () => 'p' + (nextId++);
+
+function findWs(pid) { for (const [ws, ps] of PlayerState) if (ps.id === pid) return ws; return null; }
+
+function publicState(room) {
+  return {
+    roomId: room.id,
+    phase: room.phase,
+    heroes: room.heroes || [],
+    players: room.players.map(pid => {
+      const ps = PlayerState.get(findWs(pid));
+      const p = room.playerData?.[pid] || { souls:0, wounds:0, dungeon: Array.from({length:5}, (_,i)=>({index:i})) };
+      return { id: pid, name: ps?.name || pid, souls: p.souls, wounds: p.wounds, dungeon: p.dungeon };
+    }),
+  };
+}
+
+function broadcast(room) {
+  const msg = JSON.stringify({ type: 'STATE', state: publicState(room), phase: room.phase });
+  for (const [ws, ps] of PlayerState) {
+    if (ps.roomId === room.id && ws.readyState === 1) ws.send(msg);
+  }
+}
+
+function resolveDungeon(room) {
+  for (const hero of (room.heroes || [])) {
+    // find a player dungeon with matching treasure
+    let targetPlayer = null, targetSlot = null;
+    for (const pid of room.players) {
+      const pd = room.playerData[pid];
+      const slot = pd.dungeon.find(s => s.monsterName && s.treasure === hero.treasure);
+      if (slot) { targetPlayer = pid; targetSlot = slot; break; }
+    }
+    if (targetSlot) {
+      targetSlot.hp = (targetSlot.hp || 0) - hero.damage;
+      hero.hp -= 1; // room deals 1 damage
+      if (targetSlot.hp <= 0) {
+        targetSlot.monsterName = undefined; targetSlot.hp = 0;
+        const pd = room.playerData[targetPlayer];
+        pd.souls = (pd.souls || 0) + 1;
+      }
+    } else {
+      // no matching room: hero wounds the first player
+      const pid = room.players[0];
+      if (pid && room.playerData[pid]) room.playerData[pid].wounds = (room.playerData[pid].wounds || 0) + 1;
+    }
+    if (hero.hp <= 0) {
+      // hero defeated by room damage already counted via soul above if monster died; else wound already? keep simple
+    }
+  }
+  // win check
+  for (const pid of room.players) {
+    const pd = room.playerData[pid];
+    if (pd.souls >= 10) room.phase = Phases.GAME_OVER;
+    if (pd.wounds >= 5) room.phase = Phases.GAME_OVER;
+  }
+}
+function advanceRound(room) {
+  room.acted = (room.acted || 0) + 1;
+  if (room.acted >= room.players.length) {
+    room.acted = 0;
+    room.phase = Phases.REVEAL; broadcast(room);
+    setTimeout(() => { resolveDungeon(room); room.phase = Phases.DUNGEON; broadcast(room); }, 600);
+    setTimeout(() => { room.phase = Phases.ROUND_END; broadcast(room); }, 1200);
+    setTimeout(() => { room.phase = Phases.AGENT; broadcast(room); }, 1800);
+  } else {
+    broadcast(room);
+  }
+}
+
+app.use(express.static(path.join(__dirname, 'build')));
+app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'build', 'index.html')));
+
+wss.on('connection', (ws) => {
+  const id = uid();
+  PlayerState.set(ws, { id, name: null, roomId: null });
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
+
+  ws.on('message', (raw) => {
+    let data; try { data = JSON.parse(raw); } catch { return; }
+    const ps = PlayerState.get(ws);
+    if (!ps) return;
+    switch (data.type) {
+      case 'SET_NAME':
+        ps.name = String(data.name || '').slice(0, 20) || ps.id;
+        break;
+      case 'CREATE_ROOM': {
+        const roomId = Math.random().toString(36).slice(2, 11);
+        const room = { id: roomId, players: [ps.id], phase: Phases.LOBBY, playerData: {}, heroes: [], acted: 0 };
+        room.playerData[ps.id] = { souls:0, wounds:0, dungeon: Array.from({length:5}, (_,i)=>({index:i})) };
+        Rooms.set(roomId, room);
+        ps.roomId = roomId;
+        ws.send(JSON.stringify({ type: 'STATE', state: publicState(room), phase: room.phase }));
+        break;
+      }
+      case 'JOIN_ROOM': {
+        const room = Rooms.get(data.roomId);
+        if (!room) { ws.send(JSON.stringify({ type:'ERROR', message:'room not found' })); break; }
+        if (room.players.length >= 4) { ws.send(JSON.stringify({ type:'ERROR', message:'room full' })); break; }
+        if (!room.players.includes(ps.id)) room.players.push(ps.id);
+        if (!room.playerData[ps.id]) room.playerData[ps.id] = { souls:0, wounds:0, dungeon: Array.from({length:5}, (_,i)=>({index:i})) };
+        ps.roomId = room.id;
+        if (room.players.length >= 2 && room.phase === Phases.LOBBY) room.phase = Phases.AGENT;
+        broadcast(room);
+        break;
+      }
+      case 'PLAY': {
+        if (ps.roomId) {
+          const r = Rooms.get(ps.roomId);
+          if (r && r.playerData[ps.id]) {
+            const pd = r.playerData[ps.id];
+            const slot = pd.dungeon.find((s) => !s.monsterName);
+            if (slot) {
+              slot.monsterName = data.cardName || 'Monster';
+              slot.hp = 5; slot.maxHp = 5; slot.treasure = data.treasure || 'coin';
+              r.heroes = r.heroes || [];
+              r.heroes.push({ id: 'h' + (r.heroes.length+1), name: 'Hero', hp: 3, maxHp: 3, treasure: data.treasure || 'coin', damage: data.damage || 1 });
+            }
+            broadcast(r);
+          }
+          const r2 = Rooms.get(ps.roomId);
+          if (r2) advanceRound(r2);
+        }
+        break;
+      }
+      case 'PASS': {
+        if (ps.roomId) {
+          const r = Rooms.get(ps.roomId);
+          if (r) advanceRound(r);
+        }
+        break;
+      }
+    }
+  });
+
+  ws.on('close', () => {
+    const ps = PlayerState.get(ws);
+    if (ps?.roomId) {
+      const room = Rooms.get(ps.roomId);
+      if (room) {
+        room.players = room.players.filter(p => p !== ps.id);
+        if (room.players.length === 0) Rooms.delete(room.id);
+        else broadcast(room);
+      }
+    }
+    PlayerState.delete(ws);
+  });
+});
+
+const heartbeat = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) return ws.terminate();
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
+
+server.listen(PORT, () => console.log(`Boss Monster server on ${PORT}`));
+process.on('SIGTERM', () => { clearInterval(heartbeat); server.close(); });
