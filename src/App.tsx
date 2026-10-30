@@ -58,17 +58,25 @@ export default function App() {
       {/* My dungeon */}
       <div style={{ marginBottom: 12 }}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{me.name} (YOU) — {me.souls} souls, {me.wounds} wounds</div>
-        <DungeonCanvas slots={me.dungeon} />
+        <DungeonCanvas slots={me.dungeon} heroes={state.heroes} />
       </div>
 
       {state.heroes.length > 0 && <p>Heroes in play: {state.heroes.map(h=>`${h.name}(${h.hp}/${h.maxHp})`).join(', ')}</p>}
 
+      {state.phase !== 'AGENT' && (
+        <p style={{ fontSize: 14, color: '#fbbf24', margin: '8px 0' }}>
+          {state.phase === 'REVEAL' && 'Revealing heroes...'}
+          {state.phase === 'DUNGEON' && 'Heroes are attacking!'}
+          {state.phase === 'ROUND_END' && 'Round ending...'}
+        </p>
+      )}
+
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-        <button onClick={() => requestDraw()}>Draw Card</button>
-        <button onClick={() => { const c = botChooseCard(hand); if (c) { send({ type:'PLAY', cardUid: c.uid, cardName: c.name, treasure: c.treasure, damage: c.damage }); setHand(h => h.filter(x=>x.uid!==c.uid)); } }}>Bot Play</button>
+        <button onClick={() => requestDraw()} disabled={state.phase !== 'AGENT'}>Draw Card</button>
+        <button onClick={() => { const c = botChooseCard(hand); if (c) { send({ type:'PLAY', cardUid: c.uid, cardName: c.name, treasure: c.treasure, damage: c.damage }); setHand(h => h.filter(x=>x.uid!==c.uid)); } }} disabled={state.phase !== 'AGENT' || hand.length === 0}>Bot Play</button>
       </div>
 
-      <CardHandSimple cards={hand} onPlay={(uid) => { const c = hand.find(x=>x.uid===uid); send({ type:'PLAY', cardUid: uid, cardName: c?.name, treasure: c?.treasure, damage: c?.damage }); setHand(h => h.filter(c=>c.uid!==uid)); }} />
+      <CardHandSimple cards={hand} disabled={state.phase !== 'AGENT'} onPlay={(uid) => { const c = hand.find(x=>x.uid===uid); send({ type:'PLAY', cardUid: uid, cardName: c?.name, treasure: c?.treasure, damage: c?.damage }); setHand(h => h.filter(c=>c.uid!==uid)); }} />
     </div>
   );
 }

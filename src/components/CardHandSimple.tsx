@@ -2,9 +2,9 @@ import React, { memo } from 'react';
 import type { Card } from '../data/cards';
 import { RARITY_COLOR } from '../data/cards';
 
-export const CardHandSimple = memo(function CardHandSimple({ cards, onPlay }: { cards: Card[]; onPlay?: (uid: string) => void }) {
+export const CardHandSimple = memo(function CardHandSimple({ cards, onPlay, disabled }: { cards: Card[]; onPlay?: (uid: string) => void; disabled?: boolean }) {
   return (
-    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: 8 }}>
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: 8, opacity: disabled ? 0.5 : 1, pointerEvents: disabled ? 'none' : 'auto' }}>
       {cards.map(c => (
         <button key={c.uid} onClick={() => onPlay?.(c.uid)}
           style={{ border: `2px solid ${RARITY_COLOR[c.rarity]}`, borderRadius: 8, padding: 8, background: '#111', color: '#fff', minWidth: 100 }}>
