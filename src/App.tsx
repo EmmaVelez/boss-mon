@@ -93,8 +93,17 @@ export default function App() {
           </div>
         ))}
         <div style={{ border:'1px solid #444', borderRadius:8, padding:8, minWidth:120, fontSize:11 }}>
-          <div style={{ opacity:0.7 }}>Revealed Heroes</div>
-          <div style={{ marginTop:4 }}>{state.heroes.map(h=>h.name).join(', ') || '—'}</div>
+          <div style={{ opacity:0.7, marginBottom:4 }}>Revealed Heroes</div>
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+            {state.heroes.length === 0 && <span>—</span>}
+            {state.heroes.map((h, i) => (
+              <div key={i} style={{ border:'1px solid #60a5fa', borderRadius:6, padding:4, minWidth:90, textAlign:'center' }}>
+                <div style={{ fontWeight:600 }}>{h.name}</div>
+                <div>{'❤️'.repeat(Math.max(0,h.hp))}{'🤍'.repeat(Math.max(0,h.maxHp-h.hp))}</div>
+                <div style={{ fontSize:10, opacity:0.7 }}>HP {h.hp}/{h.maxHp}</div>
+              </div>
+            ))}
+          </div>
         </div>
         <div style={{ border:'1px solid #444', borderRadius:8, padding:8, minWidth:90, fontSize:11 }}>
           <div style={{ opacity:0.7 }}>Souls / Wounds</div>
