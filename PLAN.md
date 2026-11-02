@@ -38,7 +38,7 @@ Phase 1 MVP: architecture/design docs + socket state sync. No feature content ye
 - ✅ Hero combat: HP/damage on server (resolveDungeon), hero health tracking
 - ✅ Room slot visuals: DungeonCanvas renders 5-slot grid with HP bars
 - ✅ Bot AI: botChooseCard (highest damage, rarity tiebreak)
-- 🔄 Phase 3: Hero combat display (heroes shown as text, needs visual on canvas)
+- 🔄 Phase 3: Hero combat display (heroes shown as text, needs visual on canvas) → ✅ heroes now render on canvas for all dungeons; text replaced with combat status
 - 🔄 Phase 4: Auto-play bots, multiplayer lobby enhancements, combat animations
 
 ## Directory Layout

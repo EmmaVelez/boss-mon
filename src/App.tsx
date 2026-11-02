@@ -48,8 +48,8 @@ export default function App() {
         <div style={{ marginBottom: 12 }}>
           {others.map(p => (
             <div key={p.id} style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{p.name} — {p.souls} souls, {p.wounds} wounds</div>
-              <DungeonCanvas slots={p.dungeon} width={400} height={80} />
+            <div style={{ fontSize: 13, fontWeight: 600 }}>{p.name} — {p.souls} souls, {p.wounds} wounds</div>
+            <DungeonCanvas slots={p.dungeon} heroes={state.heroes} width={400} height={80} />
             </div>
           ))}
         </div>
@@ -61,7 +61,7 @@ export default function App() {
         <DungeonCanvas slots={me.dungeon} heroes={state.heroes} />
       </div>
 
-      {state.heroes.length > 0 && <p>Heroes in play: {state.heroes.map(h=>`${h.name}(${h.hp}/${h.maxHp})`).join(', ')}</p>}
+      {state.heroes.length > 0 && state.phase === 'DUNGEON' && <p style={{ fontSize: 12, opacity: 0.8 }}>Combat resolving — heroes attacking dungeons...</p>}
 
       {state.phase !== 'AGENT' && (
         <p style={{ fontSize: 14, color: '#fbbf24', margin: '8px 0' }}>
