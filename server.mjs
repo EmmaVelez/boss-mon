@@ -190,8 +190,16 @@ wss.on('connection', (ws) => {
         if (!room.players.includes(ps.id)) room.players.push(ps.id);
         if (!room.playerData[ps.id]) room.playerData[ps.id] = { souls:0, wounds:0, dungeon: Array.from({length:5}, (_,i)=>({index:i})) };
         ps.roomId = room.id;
-        if (room.players.length >= 2 && room.phase === Phases.LOBBY) room.phase = Phases.AGENT;
-        broadcast(room);
+        if (room.players.length >= 2 && room.phase === Phases.LOBBY) {
+          room.phase = Phases.DISCARD;
+          room.discarded = [];
+          broadcast(room);
+          for (const pid of room.players) {
+            if (room.playerData[pid]?.isBot) {
+              setTimeout(() => { if (room.phase === Phases.DISCARD) { room.discarded = room.discarded || []; if (!room.discarded.includes(pid)) room.discarded.push(pid); if (room.discarded.length >= room.players.length) { room.drawnThisRound = new Set(); room.phase = Phases.AGENT; broadcast(room); scheduleBotIfNeeded(room); } else broadcast(room); } }, 800);
+            }
+          }
+        } else broadcast(room);
         break;
       }
       case 'PLAY': {
