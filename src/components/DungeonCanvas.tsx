@@ -3,11 +3,12 @@ import type { Hero, RoomSlot } from '../core/types';
 
 interface Slot extends RoomSlot {}
 
-export function DungeonCanvas({ slots = [], heroes = [], width = 500, height = 160 }: {
+export function DungeonCanvas({ slots = [], heroes = [], width = 500, height = 160, phase = '' }: {
   slots?: Slot[];
   heroes?: Hero[];
   width?: number;
   height?: number;
+  phase?: string;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -85,12 +86,16 @@ export function DungeonCanvas({ slots = [], heroes = [], width = 500, height = 1
       }
     }
 
-    // Legend
+    // Combat flash during DUNGEON phase
+    if (phase === 'DUNGEON') {
+      ctx.fillStyle = 'rgba(239,68,68,0.15)';
+      ctx.fillRect(0, 0, width, height);
+    }
     ctx.fillStyle = '#888';
     ctx.font = '10px sans-serif';
     ctx.textAlign = 'right';
     ctx.fillText('yellow = lure · red = no match', width - 8, height - 4);
-  }, [slots, heroes, width, height]);
+  }, [slots, heroes, width, height, phase]);
 
   return <canvas ref={ref} width={width} height={height} style={{ border: '1px solid #333', borderRadius: 8 }} />;
 }

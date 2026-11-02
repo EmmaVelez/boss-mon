@@ -14,6 +14,7 @@ export default function App() {
   );
   const [hand, setHand] = useState<Card[]>([]);
   const [started, setStarted] = useState(false);
+  const [autoPlay, setAutoPlay] = useState(false);
 
   // Request opening hand from server on connect
   useEffect(() => {
@@ -23,7 +24,15 @@ export default function App() {
     }
   }, [connected, started, requestDraw]);
 
-  if (!connected) return <div style={{ padding: 16 }}>Connecting…</div>;
+  // Auto-play: when enabled, play best card automatically in AGENT phase
+  useEffect(() => {
+    if (!autoPlay || state?.phase !== 'AGENT' || hand.length === 0) return;
+    const c = botChooseCard(hand);
+    if (c) {
+      send({ type: 'PLAY', cardUid: c.uid, cardName: c.name, treasure: c.treasure, damage: c.damage });
+      setHand(h => h.filter(x => x.uid !== c.uid));
+    }
+  }, [autoPlay, state?.phase, hand, send]);
   if (!state) {
     return (
       <Lobby onCreate={(name) => { send({ type:'SET_NAME', name }); send({ type:'CREATE_ROOM' }); }}
@@ -49,7 +58,7 @@ export default function App() {
           {others.map(p => (
             <div key={p.id} style={{ marginBottom: 8 }}>
             <div style={{ fontSize: 13, fontWeight: 600 }}>{p.name} — {p.souls} souls, {p.wounds} wounds</div>
-            <DungeonCanvas slots={p.dungeon} heroes={state.heroes} width={400} height={80} />
+            <DungeonCanvas slots={p.dungeon} heroes={state.heroes} width={400} height={80} phase={state.phase} />
             </div>
           ))}
         </div>
@@ -58,7 +67,7 @@ export default function App() {
       {/* My dungeon */}
       <div style={{ marginBottom: 12 }}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{me.name} (YOU) — {me.souls} souls, {me.wounds} wounds</div>
-        <DungeonCanvas slots={me.dungeon} heroes={state.heroes} />
+        <DungeonCanvas slots={me.dungeon} heroes={state.heroes} phase={state.phase} />
       </div>
 
       {state.heroes.length > 0 && state.phase === 'DUNGEON' && <p style={{ fontSize: 12, opacity: 0.8 }}>Combat resolving — heroes attacking dungeons...</p>}
@@ -74,6 +83,7 @@ export default function App() {
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
         <button onClick={() => requestDraw()} disabled={state.phase !== 'AGENT'}>Draw Card</button>
         <button onClick={() => { const c = botChooseCard(hand); if (c) { send({ type:'PLAY', cardUid: c.uid, cardName: c.name, treasure: c.treasure, damage: c.damage }); setHand(h => h.filter(x=>x.uid!==c.uid)); } }} disabled={state.phase !== 'AGENT' || hand.length === 0}>Bot Play</button>
+        <button onClick={() => setAutoPlay(a => !a)}>{autoPlay ? 'Auto: ON' : 'Auto: OFF'}</button>
       </div>
 
       <CardHandSimple cards={hand} disabled={state.phase !== 'AGENT'} onPlay={(uid) => { const c = hand.find(x=>x.uid===uid); send({ type:'PLAY', cardUid: uid, cardName: c?.name, treasure: c?.treasure, damage: c?.damage }); setHand(h => h.filter(c=>c.uid!==uid)); }} />
