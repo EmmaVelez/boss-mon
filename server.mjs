@@ -118,6 +118,26 @@ function resolveDungeon(room) {
     if (pd.wounds >= 5) room.phase = Phases.GAME_OVER;
   }
 }
+function scheduleBotIfNeeded(room) {
+  if (!room || room.phase !== Phases.AGENT) return;
+  const nextPid = room.players[room.acted];
+  if (!nextPid || !room.playerData?.[nextPid]?.isBot) return;
+  setTimeout(() => {
+    if (room.phase !== Phases.AGENT) return;
+    const pd = room.playerData[nextPid];
+    const slot = pd.dungeon.find(s => !s.monsterName);
+    if (slot) {
+      const card = CARDS[Math.floor(Math.random() * CARDS.length)];
+      slot.monsterName = card.name;
+      slot.hp = 5; slot.maxHp = 5; slot.treasure = card.treasure;
+      room.heroes = room.heroes || [];
+      room.heroes.push({ id: 'h' + (room.heroes.length + 1), name: 'Hero', hp: 3, maxHp: 3, treasure: card.treasure, damage: card.damage || 1 });
+    }
+    broadcast(room);
+    advanceRound(room);
+    scheduleBotIfNeeded(room);
+  }, 600);
+}
 function advanceRound(room) {
   room.acted = (room.acted || 0) + 1;
   if (room.acted >= room.players.length) {
@@ -185,14 +205,39 @@ wss.on('connection', (ws) => {
             broadcast(r);
           }
           const r2 = Rooms.get(ps.roomId);
-          if (r2) advanceRound(r2);
+          if (r2) { advanceRound(r2); scheduleBotIfNeeded(r2); }
         }
         break;
       }
       case 'PASS': {
         if (ps.roomId) {
           const r = Rooms.get(ps.roomId);
-          if (r) advanceRound(r);
+          if (r) { advanceRound(r); scheduleBotIfNeeded(r); }
+        }
+        break;
+      }
+      case 'ADD_BOT': {
+        if (ps.roomId) {
+          const r = Rooms.get(ps.roomId);
+          if (r && r.phase === Phases.LOBBY && r.players.length < 4) {
+            const botId = 'bot' + (r.players.length + 1);
+            r.players.push(botId);
+            r.playerData[botId] = { souls:0, wounds:0, dungeon: Array.from({length:5}, (_,i)=>({index:i})), isBot:true };
+            if (!r.bots) r.bots = [];
+            r.bots.push(botId);
+            broadcast(r);
+          }
+        }
+        break;
+      }
+      case 'START_GAME': {
+        if (ps.roomId) {
+          const r = Rooms.get(ps.roomId);
+          if (r && r.phase === Phases.LOBBY && r.players.length >= 2) {
+            r.phase = Phases.AGENT;
+            broadcast(r);
+            scheduleBotIfNeeded(r);
+          }
         }
         break;
       }

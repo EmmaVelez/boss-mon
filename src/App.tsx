@@ -39,6 +39,18 @@ export default function App() {
             onJoin={(name, roomId) => { send({ type:'SET_NAME', name }); send({ type:'JOIN_ROOM', roomId }); }} />
     );
   }
+  if (state.phase === 'LOBBY') {
+    return (
+      <div style={{ padding: 16 }}>
+        <h1>Boss Monster — Room {state.roomId}</h1>
+        <p style={{ fontSize: 12, opacity: 0.7 }}>Players: {state.players.map(p => p.name || p.id).join(', ')}</p>
+        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <button onClick={() => send({ type: 'ADD_BOT' })} disabled={state.players.length >= 4}>Add Bot</button>
+          <button onClick={() => send({ type: 'START_GAME' })} disabled={state.players.length < 2}>Start Game</button>
+        </div>
+      </div>
+    );
+  }
   if (state.phase === 'GAME_OVER') {
     const winner = state.players.reduce((a,b) => (a.souls > b.souls ? a : b));
     return <div style={{ padding:16 }}><h1>Game Over</h1><p>Winner: {winner.name} ({winner.souls} souls)</p><p>{state.players.map(p=>`${p.name}: ${p.souls} souls, ${p.wounds} wounds`).join(' · ')}</p></div>;
