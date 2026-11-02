@@ -16,13 +16,12 @@ export default function App() {
   const [started, setStarted] = useState(false);
   const [autoPlay, setAutoPlay] = useState(false);
 
-  // Request opening hand from server on connect
+  // Request opening hand from server once in a room
   useEffect(() => {
-    if (connected && !started) {
-      setStarted(true);
-      for (let i = 0; i < 3; i++) requestDraw();
-    }
-  }, [connected, started, requestDraw]);
+    if (!state || started) return;
+    setStarted(true);
+    for (let i = 0; i < 3; i++) requestDraw();
+  }, [state, started, requestDraw]);
 
   // Auto-play: when enabled, play best card automatically in AGENT phase
   useEffect(() => {
