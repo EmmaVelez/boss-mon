@@ -149,7 +149,7 @@ function advanceRound(room) {
     room.phase = Phases.REVEAL; broadcast(room);
     setTimeout(() => { resolveDungeon(room); room.phase = Phases.DUNGEON; broadcast(room); }, 600);
     setTimeout(() => { room.phase = Phases.ROUND_END; broadcast(room); }, 1200);
-    setTimeout(() => { room.phase = Phases.AGENT; broadcast(room); }, 1800);
+    setTimeout(() => { room.drawnThisRound = new Set(); room.phase = Phases.AGENT; broadcast(room); }, 1800);
   } else {
     broadcast(room);
   }
@@ -258,6 +258,7 @@ wss.on('connection', (ws) => {
             r.discarded = r.discarded || [];
             if (!r.discarded.includes(ps.id)) r.discarded.push(ps.id);
             if (r.discarded.length >= r.players.length) {
+              r.drawnThisRound = new Set();
               r.phase = Phases.AGENT; broadcast(r); scheduleBotIfNeeded(r);
             } else broadcast(r);
           }
@@ -267,7 +268,10 @@ wss.on('connection', (ws) => {
       case 'DRAW_CARD': {
         if (ps.roomId) {
           const r = Rooms.get(ps.roomId);
-          if (r) {
+          if (r && r.phase === Phases.AGENT) {
+            r.drawnThisRound = r.drawnThisRound || new Set();
+            if (r.drawnThisRound.has(ps.id)) break;
+            r.drawnThisRound.add(ps.id);
             const card = drawCard(r);
             if (card) ws.send(JSON.stringify({ type: 'DRAWN', cards: [card] }));
           }
