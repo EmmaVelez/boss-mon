@@ -68,7 +68,23 @@ export default function App() {
       </div>
       <p style={{ fontSize: 12, opacity: 0.7 }}>Players: {state.players.map(p=>`${p.name||p.id} (${p.souls}s/${p.wounds}w)`).join(' · ')}</p>
 
-      {/* Other players' dungeons */}
+      {/* Town / decks */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+        {['Epic Heroes','Heroes','Room Deck','Discard','Spell Deck'].map(d => (
+          <div key={d} style={{ border:'1px solid #444', borderRadius:8, padding:8, minWidth:70, textAlign:'center', fontSize:11 }}>
+            <div style={{ opacity:0.7 }}>{d}</div>
+            <div style={{ fontWeight:600, marginTop:4 }}>Deck</div>
+          </div>
+        ))}
+        <div style={{ border:'1px solid #444', borderRadius:8, padding:8, minWidth:120, fontSize:11 }}>
+          <div style={{ opacity:0.7 }}>Revealed Heroes</div>
+          <div style={{ marginTop:4 }}>{state.heroes.map(h=>h.name).join(', ') || '—'}</div>
+        </div>
+        <div style={{ border:'1px solid #444', borderRadius:8, padding:8, minWidth:90, fontSize:11 }}>
+          <div style={{ opacity:0.7 }}>Souls / Wounds</div>
+          <div style={{ marginTop:4 }}>{me.souls} / {me.wounds}</div>
+        </div>
+      </div>
       {others.length > 0 && (
         <div style={{ marginBottom: 12 }}>
           {others.map(p => (

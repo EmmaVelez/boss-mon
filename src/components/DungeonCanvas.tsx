@@ -14,7 +14,7 @@ export function DungeonCanvas({ slots = [], heroes = [], width = 500, height = 1
   useEffect(() => {
     const c = ref.current; if (!c) return;
     const ctx = c.getContext('2d')!;
-    const n = 5;
+    const n = 6; // 5 rooms + boss
     const heroRowTop = 8;
     const slotAreaTop = 50;
     const slotAreaHeight = height - slotAreaTop - 8;
@@ -71,7 +71,15 @@ export function DungeonCanvas({ slots = [], heroes = [], width = 500, height = 1
     for (let i = 0; i < n; i++) {
       const x = i * w;
       const y = slotAreaTop;
+      const isBoss = i === n - 1;
       ctx.strokeStyle = '#444'; ctx.strokeRect(x + 4, y, w - 8, slotAreaHeight);
+      if (isBoss) {
+        ctx.fillStyle = '#7f1d1d'; ctx.fillRect(x + 8, y + 4, w - 16, slotAreaHeight - 8);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('BOSS', x + w/2, y + slotAreaHeight/2);
+        ctx.textAlign = 'left';
+        continue;
+      }
       const s = slots[i] as any;
       if (s?.monsterName || s?.monster) {
         const name = s.monsterName || s.monster;
