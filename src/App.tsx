@@ -49,8 +49,12 @@ export default function App() {
 
   return (
     <div style={{ padding: 16 }}>
-      <h1>Boss Monster — {state.roomId}</h1>
-      <p style={{ fontSize: 12, opacity: 0.7 }}>Phase: {state.phase} · Players: {state.players.map(p=>p.name||p.id).join(', ')}</p>
+      <h1>Boss Monster — Room {state.roomId}</h1>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+        <button onClick={() => navigator.clipboard?.writeText(state.roomId)}>Copy Room Code</button>
+        <span style={{ fontSize: 12, opacity: 0.7 }}>Phase: {state.phase}</span>
+      </div>
+      <p style={{ fontSize: 12, opacity: 0.7 }}>Players: {state.players.map(p=>`${p.name||p.id} (${p.souls}s/${p.wounds}w)`).join(' · ')}</p>
 
       {/* Other players' dungeons */}
       {others.length > 0 && (
