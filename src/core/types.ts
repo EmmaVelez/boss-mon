@@ -1,6 +1,6 @@
 import type { Card } from '../data/cards';
 
-export type Phase = 'LOBBY' | 'AGENT' | 'REVEAL' | 'DUNGEON' | 'ROUND_END' | 'GAME_OVER';
+export type Phase = 'LOBBY' | 'DISCARD' | 'AGENT' | 'REVEAL' | 'DUNGEON' | 'ROUND_END' | 'GAME_OVER';
 
 export interface Currency { gold?: number; mana?: number; food?: number; }
 

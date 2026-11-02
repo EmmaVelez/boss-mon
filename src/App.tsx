@@ -15,12 +15,13 @@ export default function App() {
   const [hand, setHand] = useState<Card[]>([]);
   const [started, setStarted] = useState(false);
   const [autoPlay, setAutoPlay] = useState(false);
+  const [discardSel, setDiscardSel] = useState<string[]>([]);
 
   // Request opening hand from server once in a room
   useEffect(() => {
     if (!state || started) return;
     setStarted(true);
-    for (let i = 0; i < 3; i++) requestDraw();
+    for (let i = 0; i < 7; i++) requestDraw();
   }, [state, started, requestDraw]);
 
   // Auto-play: when enabled, play best card automatically in AGENT phase
@@ -47,6 +48,22 @@ export default function App() {
           <button onClick={() => send({ type: 'ADD_BOT' })} disabled={state.players.length >= 4}>Add Bot</button>
           <button onClick={() => send({ type: 'START_GAME' })} disabled={state.players.length < 2}>Start Game</button>
         </div>
+      </div>
+    );
+  }
+  if (state.phase === 'DISCARD') {
+    return (
+      <div style={{ padding: 16 }}>
+        <h1>Discard 2 cards</h1>
+        <p style={{ fontSize: 12, opacity: 0.7 }}>Select {2 - discardSel.length} more to discard.</p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+          {hand.map(c => (
+            <button key={c.uid} onClick={() => setDiscardSel(s => s.includes(c.uid) ? s.filter(x=>x!==c.uid) : (s.length<2 ? [...s,c.uid] : s))} style={{ padding:8, border: discardSel.includes(c.uid)?'2px solid #ef4444':'1px solid #444', borderRadius:8, background:'transparent', color:'inherit' }}>
+              {c.name}
+            </button>
+          ))}
+        </div>
+        <button disabled={discardSel.length !== 2} onClick={() => { setHand(h => h.filter(c => !discardSel.includes(c.uid))); setDiscardSel([]); send({ type: 'DISCARD_DONE' }); }}>Confirm Discard</button>
       </div>
     );
   }

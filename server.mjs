@@ -13,7 +13,7 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 
 const PlayerState = new Map();
 const Rooms = new Map();
-const Phases = { LOBBY:'LOBBY', AGENT:'AGENT', REVEAL:'REVEAL', DUNGEON:'DUNGEON', ROUND_END:'ROUND_END', GAME_OVER:'GAME_OVER' };
+const Phases = { LOBBY:'LOBBY', DISCARD:'DISCARD', AGENT:'AGENT', REVEAL:'REVEAL', DUNGEON:'DUNGEON', ROUND_END:'ROUND_END', GAME_OVER:'GAME_OVER' };
 
 let nextId = 1;
 const uid = () => 'p' + (nextId++);
@@ -55,6 +55,10 @@ const CARDS = [
   { name:'Bottomless Pit', rarity:'common', treasure:'coin', damage:1, type:'room' },
   { name:'Boulder Ramp', rarity:'common', treasure:'coin', damage:1, type:'room' },
   { name:'Dizzygas Hallway', rarity:'common', treasure:'coin', damage:1, type:'room' },
+  { name:'Fireball', rarity:'common', treasure:'coin', damage:0, type:'spell' },
+  { name:'Lightning Bolt', rarity:'common', treasure:'coin', damage:0, type:'spell' },
+  { name:'Polymorph', rarity:'uncommon', treasure:'coin', damage:0, type:'spell' },
+  { name:'Disintegrate', rarity:'rare', treasure:'coin', damage:0, type:'spell' },
 ];
 
 let cardCounter = 0;
@@ -234,9 +238,28 @@ wss.on('connection', (ws) => {
         if (ps.roomId) {
           const r = Rooms.get(ps.roomId);
           if (r && r.phase === Phases.LOBBY && r.players.length >= 2) {
-            r.phase = Phases.AGENT;
+            r.phase = Phases.DISCARD;
+            r.discarded = [];
             broadcast(r);
-            scheduleBotIfNeeded(r);
+            // auto-discard for bots
+            for (const pid of r.players) {
+              if (r.playerData[pid]?.isBot) {
+                setTimeout(() => { if (r.phase === Phases.DISCARD) { r.discarded = r.discarded || []; if (!r.discarded.includes(pid)) r.discarded.push(pid); if (r.discarded.length >= r.players.length) { r.phase = Phases.AGENT; broadcast(r); scheduleBotIfNeeded(r); } else broadcast(r); } }, 800);
+              }
+            }
+          }
+        }
+        break;
+      }
+      case 'DISCARD_DONE': {
+        if (ps.roomId) {
+          const r = Rooms.get(ps.roomId);
+          if (r && r.phase === Phases.DISCARD) {
+            r.discarded = r.discarded || [];
+            if (!r.discarded.includes(ps.id)) r.discarded.push(ps.id);
+            if (r.discarded.length >= r.players.length) {
+              r.phase = Phases.AGENT; broadcast(r); scheduleBotIfNeeded(r);
+            } else broadcast(r);
           }
         }
         break;
