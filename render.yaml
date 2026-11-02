@@ -2,8 +2,8 @@ services:
   - type: web
     name: boss-monster
     env: node
-    buildCommand: npm run build
+    buildCommand: npm ci && npm run build
     startCommand: npm start
     envVars:
-      - key: PORT
-        value: "3000"
+      - key: NODE_VERSION
+        value: "20"
