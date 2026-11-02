@@ -276,10 +276,12 @@ wss.on('connection', (ws) => {
       case 'DRAW_CARD': {
         if (ps.roomId) {
           const r = Rooms.get(ps.roomId);
-          if (r && r.phase === Phases.AGENT) {
-            r.drawnThisRound = r.drawnThisRound || new Set();
-            if (r.drawnThisRound.has(ps.id)) break;
-            r.drawnThisRound.add(ps.id);
+          if (r) {
+            if (r.phase === Phases.AGENT) {
+              r.drawnThisRound = r.drawnThisRound || new Set();
+              if (r.drawnThisRound.has(ps.id)) break;
+              r.drawnThisRound.add(ps.id);
+            }
             const card = drawCard(r);
             if (card) ws.send(JSON.stringify({ type: 'DRAWN', cards: [card] }));
           }
