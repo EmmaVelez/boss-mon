@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import type { Hero, RoomSlot } from '../core/types';
 
 interface Slot extends RoomSlot {}
@@ -12,6 +12,22 @@ export function DungeonCanvas({ slots = [], heroes = [], width = 500, height = 1
   boss?: { name: string; treasure: string; xp: number; ability: string };
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const progressRef = useRef(0);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (phase !== 'DUNGEON') { progressRef.current = 0; return; }
+    let start: number | null = null;
+    let raf = 0;
+    const step = (t: number) => {
+      if (start === null) start = t;
+      const p = Math.min(1, (t - start) / 600);
+      progressRef.current = p;
+      setTick(x => x + 1);
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [phase]);
   useEffect(() => {
     const c = ref.current; if (!c) return;
     const ctx = c.getContext('2d')!;
@@ -29,11 +45,17 @@ export function DungeonCanvas({ slots = [], heroes = [], width = 500, height = 1
     if (heroes.length > 0) {
       ctx.font = 'bold 11px sans-serif';
       heroes.forEach((hero, i) => { {
-        const x = (i + 0.5) * (width / heroes.length);
-        // Hero circle
+        const baseX = (i + 0.5) * (width / heroes.length);
+        const targetIdx = slots.findIndex(s => s.treasure === hero.treasure && s.monsterName);
+        const targetX = targetIdx >= 0 ? (targetIdx * w + w / 2) : (width / 2);
+        const targetY = slotAreaTop + slotAreaHeight / 2;
+        const p = progressRef.current;
+        const x = baseX + (targetX - baseX) * p;
+        const y = 22 + (targetY - 22) * p;
+        const r = 12 * (1 - p * 0.4);
         ctx.fillStyle = '#1e3a8a';
         ctx.beginPath();
-        ctx.arc(x, 22, 12, 0, Math.PI * 2);
+        ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = '#60a5fa';
         ctx.lineWidth = 2;
@@ -42,7 +64,7 @@ export function DungeonCanvas({ slots = [], heroes = [], width = 500, height = 1
         // Hero initials
         ctx.fillStyle = '#fff';
         ctx.textAlign = 'center';
-        ctx.fillText(hero.name.substring(0, 2).toUpperCase(), x, 25);
+        ctx.fillText(hero.name.substring(0, 2).toUpperCase(), x, y + 3);
 
         // HP bar below hero
         const hp = hero.hp, max = hero.maxHp;
@@ -56,12 +78,11 @@ export function DungeonCanvas({ slots = [], heroes = [], width = 500, height = 1
         ctx.textAlign = 'left';
 
         // Arrow from hero to matching dungeon slot (same treasure type)
-        const targetIdx = slots.findIndex(s => s.treasure === hero.treasure && s.monsterName);
         ctx.strokeStyle = targetIdx >= 0 ? '#fbbf24' : '#ef4444';
         ctx.lineWidth = 1;
         ctx.setLineDash([3, 3]);
         ctx.beginPath();
-        ctx.moveTo(x, 46);
+        ctx.moveTo(x, y + 4);
         ctx.lineTo(targetIdx >= 0 ? (targetIdx * w + w / 2) : (width / 2), slotAreaTop + 12);
         ctx.stroke();
         ctx.setLineDash([]);
@@ -128,7 +149,7 @@ export function DungeonCanvas({ slots = [], heroes = [], width = 500, height = 1
     ctx.font = '10px sans-serif';
     ctx.textAlign = 'right';
     ctx.fillText('yellow = lure · red = no match', width - 8, height - 4);
-  }, [slots, heroes, width, height, phase]);
+  }, [slots, heroes, width, height, phase, tick]);
 
   return <canvas ref={ref} width={width} height={height} style={{ border: '1px solid #333', borderRadius: 8 }} />;
 }
