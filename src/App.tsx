@@ -106,7 +106,7 @@ export default function App() {
           {others.map(p => (
             <div key={p.id} style={{ marginBottom: 8 }}>
             <div style={{ fontSize: 13, fontWeight: 600 }}>{p.name} — {p.souls} souls, {p.wounds} wounds</div>
-            <DungeonCanvas slots={p.dungeon} heroes={state.heroes} width={400} height={80} phase={state.phase} />
+            <DungeonCanvas slots={p.dungeon} heroes={state.heroes} width={400} height={80} phase={state.phase} boss={p.boss} />
             </div>
           ))}
         </div>
@@ -114,8 +114,8 @@ export default function App() {
 
       {/* My dungeon */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{me.name} (YOU) — {me.souls} souls, {me.wounds} wounds</div>
-        <DungeonCanvas slots={me.dungeon} heroes={state.heroes} phase={state.phase} />
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{me.name} (YOU) — {me.souls} souls, {me.wounds} wounds {me.boss ? `· ${me.boss.name} ${me.boss.treasure==='sword'?'⚔️':me.boss.treasure==='book'?'📖':me.boss.treasure==='ankh'?'☥':'💰'} XP ${me.boss.xp}` : ''}</div>
+        <DungeonCanvas slots={me.dungeon} heroes={state.heroes} phase={state.phase} boss={me.boss} />
       </div>
 
       {state.heroes.length > 0 && state.phase === 'DUNGEON' && <p style={{ fontSize: 12, opacity: 0.8 }}>Combat resolving — heroes attacking dungeons...</p>}

@@ -15,6 +15,13 @@ const PlayerState = new Map();
 const Rooms = new Map();
 const Phases = { LOBBY:'LOBBY', DISCARD:'DISCARD', AGENT:'AGENT', REVEAL:'REVEAL', DUNGEON:'DUNGEON', ROUND_END:'ROUND_END', GAME_OVER:'GAME_OVER' };
 
+const BOSSES = [
+  { name:'King Croak', treasure:'coin', xp:5 },
+  { name:'Dr. Nimble', treasure:'book', xp:5 },
+  { name:'Cerebellus', treasure:'book', xp:5 },
+  { name:'Brood Queen', treasure:'ankh', xp:5 },
+  { name:'Final Boss', treasure:'sword', xp:5 },
+];
 let nextId = 1;
 const uid = () => 'p' + (nextId++);
 
@@ -28,7 +35,7 @@ function publicState(room) {
     players: room.players.map(pid => {
       const ps = PlayerState.get(findWs(pid));
       const p = room.playerData?.[pid] || { souls:0, wounds:0, dungeon: Array.from({length:5}, (_,i)=>({index:i})) };
-      return { id: pid, name: ps?.name || pid, souls: p.souls, wounds: p.wounds, dungeon: p.dungeon };
+      return { id: pid, name: ps?.name || pid, souls: p.souls, wounds: p.wounds, dungeon: p.dungeon, boss: p.boss };
     }),
   };
 }
@@ -177,7 +184,7 @@ wss.on('connection', (ws) => {
       case 'CREATE_ROOM': {
         const roomId = Math.random().toString(36).slice(2, 11);
         const room = { id: roomId, players: [ps.id], phase: Phases.LOBBY, playerData: {}, heroes: [], acted: 0, deck: null, discard: [] };
-        room.playerData[ps.id] = { souls:0, wounds:0, dungeon: Array.from({length:5}, (_,i)=>({index:i})) };
+        room.playerData[ps.id] = { souls:0, wounds:0, dungeon: Array.from({length:5}, (_,i)=>({index:i})), boss: BOSSES[Math.floor(Math.random()*BOSSES.length)] };
         Rooms.set(roomId, room);
         ps.roomId = roomId;
         ws.send(JSON.stringify({ type: 'STATE', state: publicState(room), phase: room.phase }));
@@ -188,7 +195,7 @@ wss.on('connection', (ws) => {
         if (!room) { ws.send(JSON.stringify({ type:'ERROR', message:'room not found' })); break; }
         if (room.players.length >= 4) { ws.send(JSON.stringify({ type:'ERROR', message:'room full' })); break; }
         if (!room.players.includes(ps.id)) room.players.push(ps.id);
-        if (!room.playerData[ps.id]) room.playerData[ps.id] = { souls:0, wounds:0, dungeon: Array.from({length:5}, (_,i)=>({index:i})) };
+        if (!room.playerData[ps.id]) room.playerData[ps.id] = { souls:0, wounds:0, dungeon: Array.from({length:5}, (_,i)=>({index:i})), boss: BOSSES[Math.floor(Math.random()*BOSSES.length)] };
         ps.roomId = room.id;
         if (room.players.length >= 2 && room.phase === Phases.LOBBY) {
           room.phase = Phases.DISCARD;
@@ -234,7 +241,7 @@ wss.on('connection', (ws) => {
           if (r && r.phase === Phases.LOBBY && r.players.length < 4) {
             const botId = 'bot' + (r.players.length + 1);
             r.players.push(botId);
-            r.playerData[botId] = { souls:0, wounds:0, dungeon: Array.from({length:5}, (_,i)=>({index:i})), isBot:true };
+            r.playerData[botId] = { souls:0, wounds:0, dungeon: Array.from({length:5}, (_,i)=>({index:i})), isBot:true, boss: BOSSES[Math.floor(Math.random()*BOSSES.length)] };
             if (!r.bots) r.bots = [];
             r.bots.push(botId);
             broadcast(r);

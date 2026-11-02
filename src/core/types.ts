@@ -29,6 +29,7 @@ export interface PlayerPublic {
   souls: number;
   wounds: number;
   dungeon: RoomSlot[];
+  boss?: { name: string; treasure: string; xp: number };
 }
 
 export interface PublicState {
