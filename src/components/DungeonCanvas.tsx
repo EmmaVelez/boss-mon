@@ -9,7 +9,7 @@ export function DungeonCanvas({ slots = [], heroes = [], width = 500, height = 1
   width?: number;
   height?: number;
   phase?: string;
-  boss?: { name: string; treasure: string; xp: number };
+  boss?: { name: string; treasure: string; xp: number; ability: string };
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -76,11 +76,32 @@ export function DungeonCanvas({ slots = [], heroes = [], width = 500, height = 1
       ctx.strokeStyle = '#444'; ctx.strokeRect(x + 4, y, w - 8, slotAreaHeight);
       if (isBoss) {
         const emoji = boss?.treasure === 'sword' ? '⚔️' : boss?.treasure === 'book' ? '📖' : boss?.treasure === 'ankh' ? '☥' : '💰';
-        ctx.fillStyle = '#7f1d1d'; ctx.fillRect(x + 8, y + 4, w - 16, slotAreaHeight - 8);
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText((boss?.name || 'BOSS') + ' ' + emoji, x + w/2, y + slotAreaHeight/2 - 4);
+        const slotW = w - 16;
+        ctx.fillStyle = '#7f1d1d'; ctx.fillRect(x + 8, y + 4, slotW, slotAreaHeight - 8);
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+        // Name
+        let fs = 11;
+        ctx.font = `bold ${fs}px sans-serif`;
+        while (ctx.measureText((boss?.name || 'BOSS') + ' ' + emoji).width > slotW - 4 && fs > 7) { fs--; ctx.font = `bold ${fs}px sans-serif`; }
+        ctx.fillText((boss?.name || 'BOSS') + ' ' + emoji, x + w/2, y + 16);
+        // Ability
+        ctx.font = '9px sans-serif';
+        const ability = boss?.ability || '';
+        // wrap
+        const words = ability.split(' ');
+        let line = '';
+        const lines = [];
+        for (const wd of words) {
+          const test = line ? line + ' ' + wd : wd;
+          if (ctx.measureText(test).width > slotW - 4) { if (line) lines.push(line); line = wd; }
+          else line = test;
+        }
+        if (line) lines.push(line);
+        let ay = y + 30;
+        for (const ln of lines.slice(0, 3)) { ctx.fillText(ln, x + w/2, ay); ay += 11; }
+        // XP
         ctx.font = '10px sans-serif';
-        ctx.fillText('XP ' + (boss?.xp ?? 0), x + w/2, y + slotAreaHeight/2 + 12);
+        ctx.fillText('XP ' + (boss?.xp ?? 0), x + w/2, y + slotAreaHeight - 8);
         ctx.textAlign = 'left';
         continue;
       }

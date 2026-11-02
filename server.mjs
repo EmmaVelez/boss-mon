@@ -16,11 +16,11 @@ const Rooms = new Map();
 const Phases = { LOBBY:'LOBBY', DISCARD:'DISCARD', AGENT:'AGENT', REVEAL:'REVEAL', DUNGEON:'DUNGEON', ROUND_END:'ROUND_END', GAME_OVER:'GAME_OVER' };
 
 const BOSSES = [
-  { name:'King Croak', treasure:'coin', xp:5 },
-  { name:'Dr. Nimble', treasure:'book', xp:5 },
-  { name:'Cerebellus', treasure:'book', xp:5 },
-  { name:'Brood Queen', treasure:'ankh', xp:5 },
-  { name:'Final Boss', treasure:'sword', xp:5 },
+  { name:'King Croak', treasure:'coin', xp:5, ability:'Gain 1 soul when a hero dies' },
+  { name:'Dr. Nimble', treasure:'book', xp:5, ability:'Draw an extra card each turn' },
+  { name:'Cerebellus', treasure:'book', xp:5, ability:'Rooms deal +1 damage' },
+  { name:'Brood Queen', treasure:'ankh', xp:5, ability:'Heal 1 HP to all rooms' },
+  { name:'Final Boss', treasure:'sword', xp:5, ability:'Heroes take +1 damage' },
 ];
 let nextId = 1;
 const uid = () => 'p' + (nextId++);
